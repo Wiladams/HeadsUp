@@ -1,0 +1,17 @@
+HeadsUp provides an environment within which to run Lua scripts that use OpenGL.
+
+This is similar to wlua.exe as it is a Windows application, but beyond that
+you can do whatever you want.
+
+There are some global functions that HeadsUp looks for in your code:
+
+init() - Called once to initialize your script
+display() - Called for every frame (currently fixed to 30 fps)
+ontick(tickCount) - Called once per frame
+
+
+The model of interaction is very similar to that of GLUT.  Basically just
+do your setup, and start drawing.
+
+
+
