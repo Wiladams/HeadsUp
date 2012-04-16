@@ -293,7 +293,7 @@ lua_State * HUPCreateLuaState()
 		lua_pushstring(L, fname);
 		lua_settable(L,-3);
 	}
-	lua_setglobal(L, "arg");
+	lua_setglobal(L, "argv");
 
 	startupbufflen = sprintf(startupbuff, "%s\\%s", appdir, "StartUp.lua");
 	startupbuff[startupbufflen] = '\0';
@@ -305,16 +305,28 @@ lua_State * HUPCreateLuaState()
 	return NULL;
 }
 
+/*
+
+*/
+int SwapGLBuffers(void)
+{
+	// Swap GL Buffers
+	SwapBuffers(hWndDC);
+
+	return 0;
+}
+
 int OnTick(int tickCount)
 {
 	// Call application's OnTick
 	// if registered
 	if (tickDelegate != NULL) {
 		tickDelegate(tickCount);
+		//SwapGLBuffers();
+	} else
+	{
+		SwapGLBuffers();
 	}
-
-	// Swap GL Buffers
-	SwapBuffers(hWndDC);
 
 	return 0;
 }
@@ -422,7 +434,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 int main(int argc, char **argv)
 {
-printf("main argc, argv: %d %d\n", argc, argv);
 	int err = 0;
 	ATOM cAtom;
 	HWND hWnd;

@@ -2,7 +2,7 @@ require "BanateCore"
 
 require "StopWatch"
 require "FileUtils"
-
+require "win_user32"
 
 class.HeadsUpViewer()
 
@@ -15,9 +15,13 @@ function HeadsUpViewer:_init(awidth, aheight)
 	self:OnWindowResized(awidth, aheight);
 end
 
+function HeadsUpViewer:OnIdle(idleTime)
+
+end
 
 function HeadsUpViewer:OnTick(tickCount)
-	self:Tick(tickCount)
+	self:Tick(tickCount);
+	HUP.SwapGLBuffers();
 end
 
 function HeadsUpViewer:OnWindowResized(width, height)
@@ -32,7 +36,23 @@ function HeadsUpViewer:OnWindowResized(width, height)
 end
 
 function HeadsUpViewer:OnKeyboardMouse(hWnd, msg, wParam, lParam)
---print(string.format("OnKeyboardMouse: 0x%x", msg))
+	if msg == ffi.C.WM_CHAR then
+		if _G.keyboard then
+			keychar(string.char(wParam), 0, 0);
+		end
+	end
+
+	if msg == ffi.C.WM_KEYDOWN then
+		if _G.keydown then
+			keydown(tonumber(wParam), 0, 0);
+		end
+	end
+
+	if msg == ffi.C.WM_KEYUP then
+		if _G.keyup then
+			keyup(tonumber(wParam), 0, 0);
+		end
+	end
 end
 
 

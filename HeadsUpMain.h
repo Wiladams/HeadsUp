@@ -17,7 +17,7 @@ DllExport int RegisterTickDelegate(OnTickDelegate delegate);
 DllExport int RegisterKeyboardMouse(MsgReceiver receiver);
 DllExport int RegisterResizedDelegate(OnResizedDelegate delegate);
 
-
+DllExport int SwapGLBuffers(void);
 
 #ifdef __cplusplus
 }

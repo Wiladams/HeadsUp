@@ -5,7 +5,7 @@
 --
 --print("StartUp.lua - Package Path Before: ", package.path)
 
-local apppath = string.format([[;%s\?.lua;%s\core\?.lua;%s\core\Win32\?.lua;%s\modules\?.lua]],arg[1], arg[1], arg[1], arg[1]);
+local apppath = string.format([[;%s\?.lua;%s\core\?.lua;%s\core\Win32\?.lua;%s\modules\?.lua]],argv[1], argv[1], argv[1], argv[1]);
 local ppath = package.path..apppath;
 package.path = ppath;
 
@@ -13,11 +13,19 @@ package.path = ppath;
 
 
 ffi = require "ffi"
-gl = require( "gl" )
+gl = require("gl")
+glutils = require ("glutils")
+glu = require("glu")
+require "WTypes"
+require "keyboardmouse"
+
 HUP = ffi.load("HeadsUp.exe")
 
 
-require "HeadsUpViewer"
+--[[
+	Define the ffi interface back to the host
+	environment.
+--]]
 
 ffi.cdef[[
 typedef void (*OnResizedDelegate)(int newWidth, int newHeight);
@@ -28,17 +36,23 @@ int RegisterKeyboardMouse(MsgReceiver receiver);
 int RegisterResizedDelegate(OnResizedDelegate delegate);
 int RegisterTickDelegate(OnTickDelegate delegate);
 
+int SwapGLBuffers(void);
+
 ]]
 
+require "HeadsUpViewer"
 
 local canvasWidth = 1024
 local canvasHeight = 768
 
 MainView = nil;
 
+function OnIdle(idleTime)
+	MainView:OnIdle(idleTime);
+end
 
 function OnTick(tickCount)
-	MainView:Tick(tickCount)
+	MainView:OnTick(tickCount)
 end
 
 function OnWindowResized(width, height)
@@ -64,9 +78,9 @@ function main()
 
 	-- If we have a file to load
 	-- Then load the file
-	if arg[2] ~= nil then
-print("StartUp main, loading file: ", arg[2]);
-		MainView:LoadFile(arg[2])
+	if argv[2] ~= nil then
+print("StartUp main, loading file: ", argv[2]);
+		MainView:LoadFile(argv[2])
 	end
 end
 
