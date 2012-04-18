@@ -34,11 +34,11 @@ print("Texture:_init")
 	checkGL( "glBenTextures" )
 
 	-- Enable Texture Mapping
-	gl.glEnable(gl.GL_TEXTURE_2D)
+	gl.glEnable(GL_TEXTURE_2D)
 
 	-- Bind to the texture so opengl knows which Texture object
 	-- we are operating on
-	gl.glBindTexture( gl.GL_TEXTURE_2D, self.TextureID )
+	gl.glBindTexture( GL_TEXTURE_2D, self.TextureID )
 	checkGL( "glBindTexture")
 
 
@@ -50,9 +50,9 @@ print("Texture:_init")
 	--gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_NEAREST)
 
 	-- Create Linear Filtered Texture
-	gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
+	gl.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
 	checkGL("minfilter")
-	gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
+	gl.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
 	checkGL("magfilter")
 
 
@@ -61,24 +61,31 @@ print("Texture:_init")
 --print(string.format("  incoming: 0x%x", incoming))
 --print("Size: ", self.Width, self.Height)
 
-	gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, GLTexture.Defaults.UnpackAlignment)
-	gl.glTexImage2D (gl.GL_TEXTURE_2D,
+	gl.glPixelStorei(GL_UNPACK_ALIGNMENT, GLTexture.Defaults.UnpackAlignment)
+	gl.glTexImage2D (GL_TEXTURE_2D,
 		0, 				-- texture level
 		gpuFormat, 	-- internal format
 		self.Width, 	-- width
 		self.Height, 	-- height
 		0, 				-- border
 		dataFormat, 		-- format of incoming data
-		gl.GL_UNSIGNED_BYTE,	-- data type of incoming data
+		GL_UNSIGNED_BYTE,	-- data type of incoming data
 		data)		-- pointer to incoming data
 
 	checkGL("glTexImage2D")
 end
 
+function GLTexture:SetFilters(minFilter, magFilter)
+	gl.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minFilter)
+	checkGL("minfilter")
+	gl.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, magFilter)
+	checkGL("magfilter")
+end
+
 
 function GLTexture.MakeCurrent(self)
 --print("Texture.MakeCurrent() - ID: ", self.TextureID);
-	gl.glBindTexture(gl.GL_TEXTURE_2D, self.TextureID)
+	gl.glBindTexture(GL_TEXTURE_2D, self.TextureID)
 	checkGL("glBindTexture")
 end
 
@@ -144,13 +151,13 @@ function GLTexture.Render(self, x, y, awidth, aheight)
 
 	--gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1)
 
-	gl.glEnable(gl.GL_TEXTURE_2D)
+	gl.glEnable(GL_TEXTURE_2D)
 
 	self:MakeCurrent()
 
 
-	gl.glBegin(gl.GL_QUADS)
-		gl.glNormal3d( 0, 0, 1)                      -- Normal Pointing Towards Viewer
+	gl.glBegin(GL_QUADS)
+		--gl.glNormal3d( 0, 0, 1)                      -- Normal Pointing Towards Viewer
 
 		gl.glTexCoord2d(0, 0)
 		gl.glVertex3d(x, y+aheight,  0)  -- Point 1 (Front)
@@ -169,7 +176,7 @@ function GLTexture.Render(self, x, y, awidth, aheight)
 	gl.glEnd()
 
 	-- Disable Texture Mapping
-	gl.glDisable(gl.GL_TEXTURE_2D)
+	gl.glDisable(GL_TEXTURE_2D)
 end
 
 

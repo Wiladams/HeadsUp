@@ -1,20 +1,9 @@
 local ffi = require "ffi"
 
-local libs = ffi_OpenGL_libs or {
-   OSX     = { x86 = "OpenGL.framework/OpenGL", x64 = "OpenGL.framework/OpenGL" },
-   Windows = { x86 = "OPENGL32.DLL",            x64 = "OPENGL32.DLL" },
-   Linux   = { x86 = "libGL.so",                x64 = "libGL.so", arm = "libGL.so" },
-   BSD     = { x86 = "libGL.so",                x64 = "libGL.so" },
-   POSIX   = { x86 = "libGL.so",                x64 = "libGL.so" },
-   Other   = { x86 = "libGL.so",                x64 = "libGL.so" },
-}
 
-local lib  = ffi_OpenGL_lib or libs[ ffi.os ][ ffi.arch ]
-
-local gl   = ffi.load( lib )
-
-
-
+--[[
+	This file should be included from OglMan, and not directly
+--]]
 
 
 -- OpenGL Constants
@@ -894,6 +883,7 @@ local gl   = ffi.load( lib )
  GL_INT_VEC2                       = 0x8B53;
  GL_INT_VEC3                       = 0x8B54;
  GL_INT_VEC4                       = 0x8B55;
+--[[
  GL_BOOL                           = 0x8B56;
  GL_BOOL_VEC2                      = 0x8B57;
  GL_BOOL_VEC3                      = 0x8B58;
@@ -904,6 +894,7 @@ local gl   = ffi.load( lib )
  GL_SAMPLER_1D                     = 0x8B5D;
  GL_SAMPLER_2D                     = 0x8B5E;
  GL_SAMPLER_3D                     = 0x8B5F;
+--]]
  GL_SAMPLER_CUBE                   = 0x8B60;
  GL_SAMPLER_1D_SHADOW              = 0x8B61;
  GL_SAMPLER_2D_SHADOW              = 0x8B62;
@@ -928,37 +919,7 @@ local gl   = ffi.load( lib )
  GL_VERTEX_ATTRIB_ARRAY_POINTER    = 0x8645;
  GL_VERTEX_PROGRAM_POINT_SIZE      = 0x8642;
  GL_VERTEX_PROGRAM_TWO_SIDE        = 0x8643;
- GL_MAX_TEXTURE_COORDS             = 0x8871;
- GL_MAX_TEXTURE_IMAGE_UNITS        = 0x8872;
- GL_MAX_DRAW_BUFFERS               = 0x8824;
- GL_DRAW_BUFFER0                   = 0x8825;
- GL_DRAW_BUFFER1                   = 0x8826;
- GL_DRAW_BUFFER2                   = 0x8827;
- GL_DRAW_BUFFER3                   = 0x8828;
- GL_DRAW_BUFFER4                   = 0x8829;
- GL_DRAW_BUFFER5                   = 0x882A;
- GL_DRAW_BUFFER6                   = 0x882B;
- GL_DRAW_BUFFER7                   = 0x882C;
- GL_DRAW_BUFFER8                   = 0x882D;
- GL_DRAW_BUFFER9                   = 0x882E;
- GL_DRAW_BUFFER10                  = 0x882F;
- GL_DRAW_BUFFER11                  = 0x8830;
- GL_DRAW_BUFFER12                  = 0x8831;
- GL_DRAW_BUFFER13                  = 0x8832;
- GL_DRAW_BUFFER14                  = 0x8833;
- GL_DRAW_BUFFER15                  = 0x8834;
- GL_POINT_SPRITE                   = 0x8861;
- GL_COORD_REPLACE                  = 0x8862;
- GL_POINT_SPRITE_COORD_ORIGIN      = 0x8CA0;
- GL_LOWER_LEFT                     = 0x8CA1;
- GL_UPPER_LEFT                     = 0x8CA2;
- GL_STENCIL_BACK_FUNC              = 0x8800;
- GL_STENCIL_BACK_VALUE_MASK        = 0x8CA4;
- GL_STENCIL_BACK_REF               = 0x8CA3;
- GL_STENCIL_BACK_FAIL              = 0x8801;
- GL_STENCIL_BACK_PASS_DEPTH_FAIL   = 0x8802;
- GL_STENCIL_BACK_PASS_DEPTH_PASS   = 0x8803;
- GL_STENCIL_BACK_WRITEMASK         = 0x8CA5;
+
  GL_CURRENT_RASTER_SECONDARY_COLOR = 0x845F;
  GL_PIXEL_PACK_BUFFER              = 0x88EB;
  GL_PIXEL_UNPACK_BUFFER            = 0x88EC;
@@ -985,33 +946,7 @@ local gl   = ffi.load( lib )
 
 
 
--- Type declarations
-ffi.cdef[[
-typedef unsigned int GLenum;
-typedef unsigned char GLboolean;
-typedef unsigned int GLbitfield;
-typedef signed char GLbyte;
-typedef short GLshort;
-typedef int GLint;
-typedef int GLsizei;
-typedef unsigned char GLubyte;
-typedef unsigned short GLushort;
-typedef unsigned int GLuint;
-typedef float GLfloat;
-typedef float GLclampf;
-typedef double GLdouble;
-typedef double GLclampd;
-typedef void GLvoid;
-typedef long GLintptr;
-typedef long GLsizeiptr;
-typedef char GLchar;
-typedef char GLcharARB;
-typedef void *GLhandleARB;
-typedef long GLintptrARB;
-typedef long GLsizeiptrARB;
-typedef unsigned short GLhalfARB;
-typedef unsigned short GLhalf;
-]]
+
 
 -- Regular OpenGL
 ffi.cdef[[

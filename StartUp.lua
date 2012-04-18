@@ -5,6 +5,8 @@
 --
 --print("StartUp.lua - Package Path Before: ", package.path)
 
+ffi = require "ffi"
+
 local apppath = string.format([[;%s\?.lua;%s\core\?.lua;%s\core\Win32\?.lua;%s\modules\?.lua]],argv[1], argv[1], argv[1], argv[1]);
 local ppath = package.path..apppath;
 package.path = ppath;
@@ -12,10 +14,9 @@ package.path = ppath;
 --print("StartUp.lua - Package Path After: ", package.path)
 
 
-ffi = require "ffi"
-gl = require("gl")
-glutils = require ("glutils")
+ogm = require("OglMan")
 glu = require("glu")
+
 require "WTypes"
 require "keyboardmouse"
 

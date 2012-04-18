@@ -4,11 +4,11 @@ local spin = 0.0;
 
 function init()
 	gl.glClearColor(0,0,0,0);
-	gl.glShadeModel(gl.GL_FLAT);
+	gl.glShadeModel(GL_FLAT);
 end
 
 function display(canvas)
-	gl.glClear(gl.GL_COLOR_BUFFER_BIT);
+	gl.glClear(GL_COLOR_BUFFER_BIT);
 
 	gl.glPushMatrix();
 	  gl.glRotatef(spin, 0,0,1);
@@ -29,10 +29,10 @@ end
 function reshape(w, h)
 	gl.glViewport(0,0,w,h)
 
-	gl.glMatrixMode(gl.GL_PROJECTION);
+	gl.glMatrixMode(GL_PROJECTION);
 	gl.glLoadIdentity();
 	gl.glOrtho(-50, 50, -50, 50, -1, 1);
 
-	gl.glMatrixMode(gl.GL_MODELVIEW);
+	gl.glMatrixMode(GL_MODELVIEW);
 	gl.glLoadIdentity();
 end

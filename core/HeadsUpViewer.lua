@@ -12,7 +12,7 @@ function HeadsUpViewer:_init(awidth, aheight)
 	self.frameCount = 0
 	self.StopWatch = StopWatch()
 
-	self:OnWindowResized(awidth, aheight);
+	--self:OnWindowResized(awidth, aheight);
 end
 
 function HeadsUpViewer:OnIdle(idleTime)
@@ -37,7 +37,7 @@ end
 
 function HeadsUpViewer:OnKeyboardMouse(hWnd, msg, wParam, lParam)
 	if msg == ffi.C.WM_CHAR then
-		if _G.keyboard then
+		if _G.keychar then
 			keychar(string.char(wParam), 0, 0);
 		end
 	end

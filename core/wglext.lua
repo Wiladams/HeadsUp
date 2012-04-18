@@ -29,8 +29,13 @@
 /* wglext.h last updated 2012/01/04 */
 /* Current version at http://www.opengl.org/registry/ */
 --]]
+
+--[[
+	This file should be included from OglMan, and not directly
+--]]
+
+
 local ffi = require "ffi"
---require "Win32//WTypes"
 
 WGL_WGLEXT_VERSION = 24
 
