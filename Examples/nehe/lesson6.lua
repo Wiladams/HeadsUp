@@ -24,7 +24,7 @@ function init()
 	glPixelStorei ( GL_UNPACK_ALIGNMENT, 1 );
 
 	local img, imgwidth, imgheight = ReadTargaFromFile("SWIRL.tga")
-	texobj = GLTexture(imgwidth, imgheight, GL_RGBA, img, GL_BGR, 3)
+	texobj = GLTexture.Create(imgwidth, imgheight, GL_RGBA, img, GL_BGR, GL_UNSIGNED_BYTE, 3)
 
 	glEnable ( GL_CULL_FACE );
 

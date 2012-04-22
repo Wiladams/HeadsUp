@@ -29,17 +29,17 @@ local	bp = false;			-- B Pressed? ( NEW )
 
 function LoadGLTextures()
 	local img, imgwidth, imgheight = ReadTargaFromFile("glass.tga")
-	texobj = GLTexture(imgwidth, imgheight, GL_RGBA, img, GL_BGR, 3)
+	texobj = GLTexture.Create(imgwidth, imgheight, GL_RGBA, img, GL_BGR, GL_UNSIGNED_BYTE, 3)
 	texobj:SetFilters(GL_NEAREST, GL_NEAREST);
 	table.insert(texture_id, texobj);
 
 	img, imgwidth, imgheight = ReadTargaFromFile("glass.tga")
-	texobj = GLTexture(imgwidth, imgheight, GL_RGBA, img, GL_BGR, 3)
+	texobj = GLTexture.Create(imgwidth, imgheight, GL_RGBA, img, GL_BGR, GL_UNSIGNED_BYTE, 3)
 	texobj:SetFilters(GL_LINEAR, GL_LINEAR);
 	table.insert(texture_id, texobj);
 
 	img, imgwidth, imgheight = ReadTargaFromFile("glass.tga")
-	texobj = GLTexture(imgwidth, imgheight, GL_RGBA, img, GL_BGR, 3)
+	texobj = GLTexture.Create(imgwidth, imgheight, GL_RGBA, img, GL_BGR, GL_UNSIGNED_BYTE, 3)
 	texobj:SetFilters(GL_LINEAR_MIPMAP_NEAREST, GL_LINEAR);
 	table.insert(texture_id, texobj);
 end

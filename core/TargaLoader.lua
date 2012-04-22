@@ -109,7 +109,7 @@ function CreatePixelArrayFromBytes(bytes)
 	local targaFooterBytes = bytes:sub(-26, fileLength);
 	local targaFooterSignature = targaFooterBytes:sub(9,17);
 
-	print("Targa Footer Bytes: ", targaFooterBytes);
+	--print("Targa Footer Bytes: ", targaFooterBytes);
 
 	--local targaFooterSignature = System.Text.ASCIIEncoding.ASCII.GetString(targaFooterBytes, 8, 16);
 

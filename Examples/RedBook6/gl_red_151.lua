@@ -6,8 +6,8 @@ function init()
 end
 
 function display()
-	local eqn = vec4(0,1,0,0);
-	local eqn2 = vec4(1,0,0,0);
+	local eqn = double4(0,1,0,0);
+	local eqn2 = double4(1,0,0,0);
 
 	gl.glClear(GL_COLOR_BUFFER_BIT);
 	gl.glColor3f(1,1,1);

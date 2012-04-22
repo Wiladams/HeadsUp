@@ -48,7 +48,7 @@ require "GLSLProgram"
 local height = 0
 
 local img, imgwidth, imgheight = ReadTargaFromFile("Windmill.tga")
-windmilltex = GLTexture(imgwidth, imgheight, GL_RGBA, img, GL_BGR, 3)
+windmilltex = GLTexture.Create(imgwidth, imgheight, GL_RGBA, img, GL_RGB, GL_UNSIGNED_CHAR, 3)
 
 local gpuprog;
 local windowwidth = 640

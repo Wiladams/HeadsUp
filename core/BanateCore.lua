@@ -352,6 +352,10 @@ float2 = ffi.typeof("float[2]")
 float3 = ffi.typeof("float[3]")
 float4 = ffi.typeof("float[4]")
 
+double2 = ffi.typeof("double[2]")
+double3 = ffi.typeof("double[3]")
+double4 = ffi.typeof("double[4]")
+
 function IsZero(a)
     return (math.abs(a) < kEpsilon);
 end
