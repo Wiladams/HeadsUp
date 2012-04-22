@@ -1,54 +1,94 @@
-class.GPUShader();
+local ffi = require "ffi"
 
-function GPUShader:_init(stype, text)
+ffi.cdef[[
+typedef struct glsl_shader_t
+{
+	int ID;
+	bool Owner;
+}glsl_shader_t;
+]]
 
-	self.ShaderType = stype;
+GLSLShader = {}
+GLSLShader_mt = {
+	__index = {
+		CreateFromText = function(self, text, stype)
+			local src_array = ffi.new("char*[1]", ffi.cast("char *",text));
+			local lpSuccess = ffi.new("int[1]");
 
-	local src_array = ffi.new("char*[1]", ffi.cast("char *",text));
-	local lpSuccess = ffi.new("int[1]");
+			self.ID = ogm.glCreateShader(stype);
+			self.Owner = true;
+			ogm.glShaderSource(self.ID, 1, src_array, nil);
+			self:Compile();
 
-	self.ID = ogm.glCreateShader(stype);
-	ogm.glShaderSource(self.ID, 1, src_array, nil);
-	ogm.glCompileShader(self.ID);
+			return self;
+		end,
 
-	ogm.glGetShaderiv(self.ID, GL_COMPILE_STATUS, lpSuccess);
+		CreateFromFile = function(self, fname, stype)
+			local fp = io.open(fname, "r");
+			local src_buf = fp:read("*all");
 
-	self.CompileStatus = lpSuccess[0];
+			self:CreateFromText(src_buf, stype)
 
-		if(success == 0) then
---[[
-		int info_len;
-		char *info_log;
+			fp:close();
 
-		glGetObjectParameterivARB(sdr, GL_OBJECT_INFO_LOG_LENGTH_ARB, &info_len);
-		if(info_len > 0) {
-			if(!(info_log = malloc(info_len + 1))) {
-				perror("malloc failed");
-				return 0;
-			}
-			glGetInfoLogARB(sdr, info_len, 0, info_log);
-			fprintf(stderr, "shader compilation failed: %s\n", info_log);
-			free(info_log);
-		} else {
-			fprintf(stderr, "shader compilation failed\n");
-		}
-		return 0;
---]]
-	end
-end
+			return shader;
+		end,
+
+		Compile = function(self)
+			ogm.glCompileShader(self.ID);
+		end,
+
+		GetValue = function(self, nameenum)
+			local lpParams = ffi.new("int[1]");
+
+			ogm.glGetShaderiv(self.ID, nameenum, lpParams)
+			return lpParams[0];
+		end,
+
+		GetShaderType = function(self)
+			return self:GetValue(GL_SHADER_TYPE);
+		end,
+
+		GetDeleteStatus = function(self)
+			return self:GetValue(GL_DELETE_STATUS);
+		end,
+
+		GetCompileStatus = function(self)
+			return self:GetValue(GL_COMPILE_STATUS);
+		end,
+
+		GetInfoLogLength = function(self)
+			return self:GetValue(GL_INFO_LOG_LENGTH);
+		end,
+
+		GetSourceLength = function(self)
+			return self:GetValue(GL_SHADER_SOURCE_LENGTH);
+		end,
+
+		GetSource = function(self)
+			local bufSize = self:GetSourceLength();
+			local source = Array1D(bufSize+1, "char")
+			local lpLength = ffi.new("int[1]");
+
+			ogm.glGetShaderSource(self.ID, bufSize, lpLength, source)
+
+			return ffi.string(source);
+		end,
+
+		GetInfoLog = function(self)
+			local bufSize = self:GetInfoLogLength();
+			local log = Array1D(bufSize+1, "char")
+			local lpLength = ffi.new("int[1]");
+
+			ogm.glGetShaderInfoLog(self.ID, bufSize, lpLength, log)
+
+			return ffi.string(log);
+		end,
+	},
+}
+GLSLShader = ffi.metatype("glsl_shader_t", GLSLShader_mt);
 
 
-
-function CreateShaderFromFile(fname, stype)
-	local fp = io.open(fname, "r");
-	local src_buf = fp:read("*all");
-
-	local shader = GPUShader(GL_FRAGMENT_SHADER, src_buf)
-
-	fp:close();
-
-	return shader;
-end
 
 
 
@@ -64,12 +104,12 @@ function GPUProgram.new(fragtext, vertext)
 	self.ID = ogm.glCreateProgram();
 
 	if fragtext ~= nil then
-		self.FragmentShader = GPUShader(GL_FRAGMENT_SHADER, fragtext);
+		self.FragmentShader = GLSLShader():CreateFromText(fragtext, GL_FRAGMENT_SHADER);
 		GPUProgram.AttachShader(self, self.FragmentShader);
 	end
 
 	if vertext ~= nil then
-		self.VertexShader = GPUShader(GL_VERTEX_SHADER, vertext);
+		self.VertexShader = GLSLShader():CreateFromText(vertext, GL_VERTEX_SHADER);
 		GPUProgram.AttachShader(self, self.VertexShader);
 	end
 
@@ -101,11 +141,83 @@ function GPUProgram:Use()
 	ogm.glUseProgram(self.ID);
 end
 
+local function get_ProgramValue(programid, nameenum)
+	local lpParams = ffi.new("int[1]");
+
+	ogm.glGetProgramiv(programid, nameenum, lpParams)
+
+	return lpParams[0];
+end
+
+function GPUProgram:GetDeleteStatus()
+	return get_ProgramValue(self.ID, GL_DELETE_STATUS);
+end
+
+function GPUProgram:GetLinkStatus()
+	return get_ProgramValue(self.ID, GL_LINK_STATUS);
+end
+
+function GPUProgram:GetValidateStatus()
+	return get_ProgramValue(self.ID, GL_VALIDATE_STATUS);
+end
+
+function GPUProgram:GetInfoLogLength()
+	return get_ProgramValue(self.ID, GL_INFO_LOG_LENGTH);
+end
+
+function GPUProgram:GetAttachedShaderCount()
+	return get_ProgramValue(self.ID, GL_ATTACHED_SHADERS);
+end
+
+function GPUProgram:GetActiveAttributeCount()
+	return get_ProgramValue(self.ID, GL_ACTIVE_ATTRIBUTES);
+end
+
+function GPUProgram:GetActiveAttributeMaxLength()
+	return get_ProgramValue(self.ID, GL_ACTIVE_ATTRIBUTE_MAX_LENGTH);
+end
+
+function GPUProgram:GetActiveUniformCount()
+	return get_ProgramValue(self.ID, GL_ACTIVE_UNIFORMS);
+end
+
+function GPUProgram:GetActiveUniformMaxLength()
+	return get_ProgramValue(self.ID, GL_ACTIVE_UNIFORM_MAX_LENGTH);
+end
+
+function GPUProgram:GetInfoLog()
+	local bufSize = self:GetInfoLogLength();
+	local buff = Array1D(bufSize+1, "char")
+	local lpLength = ffi.new("int[1]");
+
+	ogm.glGetProgramInfoLog(self.ID, bufSize, lpLength, buff)
+
+	return ffi.string(buff);
+end
+
+
+function GPUProgram:Print()
+	print("==== GLSL Program ====")
+	print(string.format("Delete Status: 0x%x", self:GetDeleteStatus()))
+	print(string.format("Link Status: 0x%x", self:GetLinkStatus()))
+	print(string.format("Validate Status: 0x%x", self:GetValidateStatus()))
+
+	print(string.format("Log Length: 0x%x", self:GetInfoLogLength()))
+	print(string.format("Attached Shaders: 0x%x", self:GetAttachedShaderCount()))
+	print(string.format("Active Attributes: 0x%x", self:GetActiveAttributeCount()))
+	print(string.format("Active Max Length: 0x%x", self:GetActiveAttributeMaxLength()))
+	print(string.format("Active Uniforms: 0x%x", self:GetActiveUniformCount()))
+	print(string.format("Active Uniform Length: 0x%x", self:GetActiveUniformMaxLength()))
+
+	print("==== LOG ====");
+	print(self:GetInfoLog());
+end
+
 
 function GetUniform(self, name)
 	local loc = ogm.glGetUniformLocation(self.ID, name);
 
-	if loc < 0 then return nil; end
+	--if loc < 0 then return nil; end
 
 	local lpsize = ffi.new("int[1]");
 	local lputype = ffi.new("int[1]");
@@ -278,7 +390,7 @@ GPUProgram_mt.__index = glsl_get
 GPUProgram_mt.__newindex = glsl_set
 
 
-function GLSLProgram(fragtext, verttext)
+function GLSLProgram(fragtext, vertext)
 	local prog = GPUProgram.new(fragtext, vertext)
 
 	return prog
@@ -306,3 +418,5 @@ function CreateGLSLProgramFromFiles(fragname, vertname)
 
 	return prog;
 end
+
+

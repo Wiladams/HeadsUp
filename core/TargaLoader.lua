@@ -163,35 +163,35 @@ print("Extended File");
 	fHeader.ImageDescriptor = reader:ReadByte(mstream);  mstream = mstream +1;
 
 
-printHeader(fHeader);
+--printHeader(fHeader);
 
 --[[
-            /// The single byte that is the ImageDescriptor contains the following
-            /// information.
-            //  Bits 3-0 - number of attribute bits associated with each  |
-            //               pixel.  For the Targa 16, this would be 0 or |
-            //               1.  For the Targa 24, it should be 0.  For   |
-            //               Targa 32, it should be 8.                    |
-            //  Bit 4    - controls left/right transfer of pixels to
-            ///             the screen.
-            ///             0 = left to right
-            ///             1 = right to left
-            //  Bit 5    - controls top/bottom transfer of pixels to
-            ///             the screen.
-            ///             0 = bottom to top
-            ///             1 = top to bottom
-            ///
-            ///             In Combination bits 5/4, they would have these values
-            ///             00 = bottom left
-            ///             01 = bottom right
-            ///             10 = top left
-            ///             11 = top right
-            ///
-            //  Bits 7-6 - Data storage interleaving flag.                |
-            //             00 = non-interleaved.                          |
-            //             01 = two-way (even/odd) interleaving.          |
-            //             10 = four way interleaving.                    |
-            //             11 = reserved.
+ The single byte that is the ImageDescriptor contains the following
+ information.
+  Bits 3-0 - number of attribute bits associated with each  |
+               pixel.  For the Targa 16, this would be 0 or |
+               1.  For the Targa 24, it should be 0.  For   |
+               Targa 32, it should be 8.                    |
+  Bit 4    - controls left/right transfer of pixels to
+             the screen.
+             0 = left to right
+             1 = right to left
+  Bit 5    - controls top/bottom transfer of pixels to
+             the screen.
+             0 = bottom to top
+             1 = top to bottom
+
+             In Combination bits 5/4, they would have these values
+             00 = bottom left
+             01 = bottom right
+             10 = top left
+             11 = top right
+
+  Bits 7-6 - Data storage interleaving flag.                |
+             00 = non-interleaved.                          |
+             01 = two-way (even/odd) interleaving.          |
+             10 = four way interleaving.                    |
+             11 = reserved.
 --]]
 
 	local desc = fHeader.ImageDescriptor;

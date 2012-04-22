@@ -344,9 +344,9 @@ kEpsilon = 1.0e-6
 --[[
 	HELPER FUNCTIONS
 --]]
-vec2 = ffi.typeof("double[2]")
-vec3 = ffi.typeof("double[3]")
-vec4 = ffi.typeof("double[4]")
+vec2 = ffi.typeof("float[2]")
+vec3 = ffi.typeof("float[3]")
+vec4 = ffi.typeof("float[4]")
 
 float2 = ffi.typeof("float[2]")
 float3 = ffi.typeof("float[3]")
@@ -3290,3 +3290,4 @@ return {
 	RectI = RectI,
 	Vec = Vec3,
 }
+
