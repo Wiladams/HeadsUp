@@ -1,25 +1,6 @@
-#define WIN32_LEAN_AND_MEAN
-
-#include <windows.h>
-
-#include <signal.h>
-#include <stdlib.h>
-#include <string.h>
-#include <tchar.h>
 
 #include "HeadsUpMain.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#include "include\lua.h"
-#include "include\lauxlib.h"
-#include "include\lualib.h"
-
-#ifdef __cplusplus
-}
-#endif
 
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -34,42 +15,42 @@ BOOL IsRunning = FALSE;
 HDC hWndDC;
 lua_State *globalL;
 
+OnResizedDelegate gResizingDelegate = NULL;
 OnResizedDelegate gResizedDelegate = NULL;
 OnTickDelegate tickDelegate = NULL;
+OnIdleDelegate idleDelegate = NULL;
 MsgReceiver gKeyboardMouse = NULL;
 
-extern "C"
-int RegisterTickDelegate(OnTickDelegate delegate)
-{
-	tickDelegate = delegate;
+// Pointers to wgl Extension functions that will be
+// defined later.
+PFNWGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormatARB = NULL;
+PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB = NULL;
 
-	return 0;
+
+void CHECKGL(char *str)
+{
+	int err = glGetError();
+	if (err != 0)
+	{
+		printf("GL Error: 0x%x  For: %s\n", err, str);
+		assert((err == 0));
+	}
 }
 
-extern "C"
-int RegisterKeyboardMouse(MsgReceiver receiver)
+
+
+
+
+
+ATOM HUPCreateWindowClass(char *wndclassname, WNDPROC msgproc)
 {
-	gKeyboardMouse = receiver;
-
-	return 0;
-}
-
-extern "C"
-int RegisterResizedDelegate(OnResizedDelegate delegate)
-{
-	gResizedDelegate = delegate;
-	return 0;
- }
-
-
-ATOM HUPRegisterWindowClass(HINSTANCE hInst, char *wndclassname)
-{
+	HINSTANCE hInst = GetModuleHandle(NULL);
 	ATOM classAtom;
 	WNDCLASSEX wcex;
 
     wcex.cbSize = sizeof(WNDCLASSEX);
     wcex.style          = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
-    wcex.lpfnWndProc    = WndProc;
+    wcex.lpfnWndProc    = msgproc;
     wcex.cbClsExtra     = 0;
     wcex.cbWndExtra     = 0;
     wcex.hInstance      = hInst;
@@ -89,18 +70,19 @@ ATOM HUPRegisterWindowClass(HINSTANCE hInst, char *wndclassname)
             _T("Win32 Guided Tour"),
             0);
 
-        return 1;
+        return 0;
     }
 
 	return classAtom;
 }
 
-HWND HUPCreateWindow(HINSTANCE hInst, char *winclass, char *wintitle, int width, int height)
+HWND HUPCreateWindow(char *winclass, char *wintitle, int width, int height)
 {
+	HINSTANCE hInst = GetModuleHandle(NULL);
 	HWND hWnd = CreateWindow(
 		winclass,
 		wintitle,
-		WS_OVERLAPPEDWINDOW,
+		WS_OVERLAPPEDWINDOW|WS_CLIPCHILDREN|WS_CLIPSIBLINGS ,
 		CW_USEDEFAULT, CW_USEDEFAULT,
 		width, height,
 		NULL,	/* parent window handle */
@@ -112,21 +94,29 @@ HWND HUPCreateWindow(HINSTANCE hInst, char *winclass, char *wintitle, int width,
 	return hWnd;
 }
 
-HGLRC HUPCreateGLContext(HWND hWnd)
+
+
+
+HGLRC HUPCreateGLContext(HWND hWnd, int majorversion, int minorversion, int multisamplemode)
 {
-    HDC hDC;
-    HGLRC hRC;
+	int err = 0;
+
+	// Create a throw away window so an initial GL
+	// context can be created
+	char *dummyname = "dummyclass";
+	ATOM dummywindowatom = HUPCreateWindowClass(dummyname, DefWindowProc);
+	HWND dummyWindow = HUPCreateWindow(dummyname, dummyname, 10, 10);
+	HDC dummydc = GetDC(dummyWindow);
+
+	// Start off with an initial pixel description to get
+	// things started.
+	// This will be close to what we want as we'll use it later
+	// with SetPixelFormat, even though it will have no effect on
+	// the outcome there.
     PIXELFORMATDESCRIPTOR pfd;
-    int pixelFormat;
-
-	// Get a handle on the device context for the window
-	hDC = GetDC(hWnd);
-
-	    // Create the GL context.
     ZeroMemory(&pfd, sizeof(pfd));
     pfd.nSize = sizeof(pfd);
     pfd.nVersion = 1;
-//    pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL;
     pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
     pfd.iPixelType = PFD_TYPE_RGBA;
     pfd.cColorBits = 32;
@@ -134,13 +124,135 @@ HGLRC HUPCreateGLContext(HWND hWnd)
     pfd.cStencilBits = 8;
     pfd.iLayerType = PFD_MAIN_PLANE;
 
-	pixelFormat = ChoosePixelFormat(hDC, &pfd);
+    int pixelFormat;
+	pixelFormat = ChoosePixelFormat(dummydc, &pfd);
+	assert(pixelFormat != 0);
 
-	SetPixelFormat(hDC, pixelFormat, &pfd);
-    hRC = wglCreateContext(hDC);
+	// Now we set the pixel format on the window so we can create
+	// the wglcontext?
+    BOOL bResult = SetPixelFormat(dummydc, pixelFormat, &pfd);
+	assert(bResult);
+
+	// Now create the dummy context
+	HGLRC dummyRC = wglCreateContext(dummydc);
+    wglMakeCurrent(dummydc, dummyRC);
+
+	// Now that we have an active glContext, we can
+	// initialize a couple of function pointers we'll need
+	wglChoosePixelFormatARB = (PFNWGLCHOOSEPIXELFORMATARBPROC)wglGetProcAddress("wglChoosePixelFormatARB");
+	assert(wglChoosePixelFormatARB != NULL);
+
+	wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)wglGetProcAddress("wglCreateContextAttribsARB");
+	assert(wglCreateContextAttribsARB != NULL);
+
+
+	// Using the wglChoosePixelFormatARB extension function,
+	// we'll try to get a more advanced pixel format
+	unsigned int nFormats=0;
+
+	if (multisamplemode > 1)
+	{
+		int pixelAttribs[] =
+		{
+			WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
+			WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
+			WGL_ACCELERATION_ARB, WGL_FULL_ACCELERATION_ARB,
+			WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
+
+			WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
+			WGL_RED_BITS_ARB, 8,
+			WGL_GREEN_BITS_ARB, 8,
+			WGL_BLUE_BITS_ARB, 8,
+			WGL_ALPHA_BITS_ARB, 8,
+			WGL_DEPTH_BITS_ARB, 24,
+			WGL_STENCIL_BITS_ARB, 8,
+
+			WGL_SAMPLE_BUFFERS_ARB, GL_TRUE,
+			WGL_SAMPLES_ARB, multisamplemode,
+
+			0,0
+		};
+
+		err = wglChoosePixelFormatARB(dummydc, pixelAttribs, NULL, 1, &pixelFormat, &nFormats);
+	} else {
+		int pixelAttribs[] =
+		{
+			WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
+			WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
+			WGL_ACCELERATION_ARB, WGL_FULL_ACCELERATION_ARB,
+			WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
+
+			WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
+			WGL_RED_BITS_ARB, 8,
+			WGL_GREEN_BITS_ARB, 8,
+			WGL_BLUE_BITS_ARB, 8,
+			WGL_ALPHA_BITS_ARB, 8,
+			WGL_DEPTH_BITS_ARB, 24,
+			WGL_STENCIL_BITS_ARB, 8,
+
+			WGL_SAMPLE_BUFFERS_ARB, GL_FALSE,
+
+			0,0
+		};
+
+		err = wglChoosePixelFormatARB(dummydc, pixelAttribs, NULL, 1, &pixelFormat, &nFormats);
+		CHECKGL("wglChoosePixelFormatARB");
+	}
+
+	// At this point, we have the wgl function pointers that we need,
+	// and we've already used the dummy dc to select a pixel format,
+	// so we can destroy the dummy window now.
+	DestroyWindow(dummyWindow);
+
+	// Now, we want to get the DC of the real window
+	// and set the pixel format on that.
+	HDC hDC = GetDC(hWnd);
+	err = SetPixelFormat(hDC, pixelFormat, &pfd);
+	printf("SetPixelFormat, RETURNED: %d\n", err);
+
+
+	// And finally, create a context of the specific
+	// version we're looking for
+	// The ctxAttribs define what attributes we want to have
+	// on the context itself.
+	int ctxAttribs[] = {
+		WGL_CONTEXT_MAJOR_VERSION_ARB, majorversion,
+		WGL_CONTEXT_MINOR_VERSION_ARB, minorversion,
+		WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB,
+		0,0
+	};
+
+    HGLRC hRC = wglCreateContextAttribsARB(hDC, 0, ctxAttribs);
+	CHECKGL("wglCreateContextAttribsARB");
+	printf("hRC: 0x%x\n", hRC);
+	if (hRC == NULL) {
+		// If creating the context that way failed for
+		// some reason, fall back to the old way of
+		// creating a context.
+		hRC = wglCreateContext(hDC);
+	}
+
+	//wglMakeCurrent(hDC, NULL);
+	//CHECKGL("wglMakeCurrent - NULL, NULL");
+
+	//wglDeleteContext(tmpRC);
+	//CHECKGL("wglDeleteContext");
+
+	//wglDeleteContext(hRC);
+	//ReleaseDC(throwAwayWindow, throwawayDC);
+	//DestroyWindow(throwAwayWindow);
 
 	return hRC;
 }
+
+
+
+
+/*
+==============================================================
+	Setup LUA
+==============================================================
+*/
 
 static void l_message(const char *pname, const char *msg)
 {
@@ -305,6 +417,16 @@ lua_State * HUPCreateLuaState()
 	return NULL;
 }
 
+
+
+
+
+
+
+
+
+
+
 /*
 
 */
@@ -312,6 +434,15 @@ int SwapGLBuffers(void)
 {
 	// Swap GL Buffers
 	SwapBuffers(hWndDC);
+
+	return 0;
+}
+
+int OnIdle()
+{
+	if (idleDelegate != NULL) {
+		idleDelegate();
+	}
 
 	return 0;
 }
@@ -346,6 +477,80 @@ int OnWindowResized(int newWidth, int newHeight)
 		gResizedDelegate(newWidth, newHeight);
 	}
 
+	return 0;
+}
+
+int OnWindowResizing(int newWidth, int newHeight)
+{
+	if (gResizingDelegate != NULL) {
+		gResizingDelegate(newWidth, newHeight);
+	}
+
+	return 0;
+}
+
+LONGLONG GetPerformanceFrequency()
+{
+	LARGE_INTEGER anum;
+	BOOL success = QueryPerformanceFrequency(&anum);
+	if (success == 0) {
+		return 0;
+	}
+
+	return anum.QuadPart;
+}
+
+
+LONGLONG GetPerformanceCounter()
+{
+	LARGE_INTEGER anum;
+	BOOL success = QueryPerformanceCounter(&anum);
+	if (success == 0) {
+		return 0;
+	}
+
+	return anum.QuadPart;
+}
+
+double GetCurrentTickTime()
+{
+	double frequency = 1/GetPerformanceFrequency();
+	LONGLONG currentCount = GetPerformanceCounter();
+	double seconds = currentCount * frequency;
+
+	return seconds;
+}
+
+int RegisterIdleDelegate(OnIdleDelegate delegate)
+{
+	idleDelegate = delegate;
+
+	return 0;
+}
+
+int RegisterTickDelegate(OnTickDelegate delegate)
+{
+	tickDelegate = delegate;
+
+	return 0;
+}
+
+int RegisterKeyboardMouse(MsgReceiver receiver)
+{
+	gKeyboardMouse = receiver;
+
+	return 0;
+}
+
+int RegisterResizingDelegate(OnResizedDelegate delegate)
+{
+	gResizingDelegate = delegate;
+	return 0;
+}
+
+int RegisterResizedDelegate(OnResizedDelegate delegate)
+{
+	gResizedDelegate = delegate;
 	return 0;
 }
 
@@ -384,6 +589,8 @@ int Run()
 			timeleft = 0;
 		}
 
+		OnIdle();
+
 		// use an alertable wait
 		MsgWaitForMultipleObjectsEx(handleCount, handles, timeleft, QS_ALLEVENTS, dwFlags);
 
@@ -416,6 +623,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			PostQuitMessage(0);
         break;
 
+		case WM_SIZING:
+			newWidth = LOWORD(lParam);
+			newHeight = HIWORD(lParam);
+			OnWindowResizing(newWidth, newHeight);
+		break;
+
 		case WM_SIZE:
 			newWidth = LOWORD(lParam);
 			newHeight = HIWORD(lParam);
@@ -442,9 +655,9 @@ int main(int argc, char **argv)
 
 	HINSTANCE hInstance = GetModuleHandle(NULL);
 
-	cAtom = HUPRegisterWindowClass(hInstance, szWindowClass);
+	cAtom = HUPCreateWindowClass(szWindowClass, WndProc);
 
-	hWnd = HUPCreateWindow(hInstance, szWindowClass, szTitle, 640, 480);
+	hWnd = HUPCreateWindow(szWindowClass, szTitle, 640, 480);
 
 	if (!hWnd)
 	{
@@ -459,9 +672,13 @@ int main(int argc, char **argv)
 
 	// Create a GL Context
 	// and attach it to the DC
-	hRC = HUPCreateGLContext(hWnd);
+	int majorversion = 4;
+	int minorversion = 2;
+	int multisamplemode = 0;
+	hRC = HUPCreateGLContext(hWnd, majorversion, minorversion, multisamplemode);
 	hWndDC = GetDC(hWnd);
 	wglMakeCurrent(hWndDC, hRC);
+	printf("GLVersion: %s\n", glGetString(GL_VERSION));
 
 
 	L = HUPCreateLuaState();

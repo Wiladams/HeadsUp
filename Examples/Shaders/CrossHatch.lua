@@ -72,6 +72,8 @@ local gpuprog;
 local windowwidth = 640
 local windowheight = 480
 
+local dragging = false;
+
 function init()
 	glClearColor(0,0,0,0);
 	glShadeModel(GL_FLAT);
@@ -150,4 +152,23 @@ function keydown(key, x, y)
 	end
 
 	gpuprog.vx_offset = offset;
+end
+
+function mousedown(x, y, modifiers, button)
+	dragging = true;
+end
+
+function mouseup(x, y, modifiers, button)
+	dragging = false;
+end
+
+function mousemove(x, y, modifiers)
+	if (dragging) then
+		local offset = map(x, 0, windowwidth, 0, 1)
+		gpuprog.vx_offset = offset;
+	end
+end
+
+function mousewheel(x, y, modifiers, delta)
+print("mousewheel: ", x, y, modifiers, delta);
 end

@@ -136,6 +136,10 @@ function GPUProgram:Link()
 	end
 end
 
+function GPUProgram:Validate()
+	ogm.glValidateProgram(self.ID);
+end
+
 
 function GPUProgram:Use()
 	ogm.glUseProgram(self.ID);
@@ -217,7 +221,7 @@ end
 function GetUniform(self, name)
 	local loc = ogm.glGetUniformLocation(self.ID, name);
 
-	--if loc < 0 then return nil; end
+--print("GetUniform: ", name, loc);
 
 	local lpsize = ffi.new("int[1]");
 	local lputype = ffi.new("int[1]");
@@ -249,6 +253,11 @@ uniformprops[GL_FLOAT]		= {1, "float", ogm.glGetUniformfv, ogm.glUniform1fv, 1, 
 uniformprops[GL_FLOAT_VEC2]	= {2, "float", ogm.glGetUniformfv, ogm.glUniform2fv, 1, "float[2]"};
 uniformprops[GL_FLOAT_VEC3]	= {3, "float", ogm.glGetUniformfv, ogm.glUniform3fv, 1, "float[3]"};
 uniformprops[GL_FLOAT_VEC4]	= {4, "float", ogm.glGetUniformfv, ogm.glUniform4fv, 1, "float[4]"};
+
+uniformprops[GL_DOUBLE]		= {1, "double", ogm.glGetUniformdv, ogm.glUniform1dv, 1, "double[1]"};
+uniformprops[GL_DOUBLE_VEC2]	= {2, "double", ogm.glGetUniformdv, ogm.glUniform2dv, 1, "double[2]"};
+uniformprops[GL_DOUBLE_VEC3]	= {3, "double", ogm.glGetUniformdv, ogm.glUniform3dv, 1, "double[3]"};
+uniformprops[GL_DOUBLE_VEC4]	= {4, "double", ogm.glGetUniformdv, ogm.glUniform4dv, 1, "double[4]"};
 
 uniformprops[GL_INT]		= {1, "int", ogm.glGetUniformiv, ogm.glUniform1iv, 1, "int[1]"};
 uniformprops[GL_INT_VEC2]	= {2, "int", ogm.glGetUniformiv, ogm.glUniform2iv, 1, "int[2]"};
@@ -338,7 +347,7 @@ function SetUniformValue(self, name, value)
 		end
 	end
 
-	-- Call the getter to get the value
+	-- Call the setter to get the value
 	setfunc(loc, narrelem, buff);
 end
 

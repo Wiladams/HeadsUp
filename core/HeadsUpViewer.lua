@@ -3,6 +3,8 @@ require "BanateCore"
 require "StopWatch"
 require "FileUtils"
 require "win_user32"
+require "keyboardmouse"
+require "GLSLProgram"
 
 class.HeadsUpViewer()
 
@@ -11,8 +13,6 @@ function HeadsUpViewer:_init(awidth, aheight)
 	self.TickCount = 0
 	self.frameCount = 0
 	self.StopWatch = StopWatch()
-
-	--self:OnWindowResized(awidth, aheight);
 end
 
 function HeadsUpViewer:OnIdle(idleTime)
@@ -35,6 +35,35 @@ function HeadsUpViewer:OnWindowResized(width, height)
 	end
 end
 
+function HeadsUpViewer:OnWindowResizing(width, height)
+	-- It would be good to redisplay from here
+end
+
+function LOWORD(param)
+	return band(param, 0x0000ffff);
+end
+
+function HIWORD(param)
+	return rshift(band(param, 0xffff0000), 16);
+end
+
+
+
+local buttonmsgmap = {}
+buttonmsgmap[ffi.C.WM_LBUTTONDOWN]	= VK_LBUTTON;
+buttonmsgmap[ffi.C.WM_LBUTTONUP]		= VK_LBUTTON;
+buttonmsgmap[ffi.C.WM_LBUTTONDBLCLK]	= VK_LBUTTON;
+buttonmsgmap[ffi.C.WM_RBUTTONDOWN]	= VK_RBUTTON;
+buttonmsgmap[ffi.C.WM_RBUTTONUP]		= VK_RBUTTON;
+buttonmsgmap[ffi.C.WM_RBUTTONDBLCLK]	= VK_RBUTTON;
+buttonmsgmap[ffi.C.WM_MBUTTONDOWN]	= VK_MBUTTON;
+buttonmsgmap[ffi.C.WM_MBUTTONUP]		= VK_MBUTTON;
+buttonmsgmap[ffi.C.WM_MBUTTONDBLCLK]	= VK_MBUTTON;
+buttonmsgmap[ffi.C.WM_XBUTTONDOWN]	= VK_XBUTTON1;
+buttonmsgmap[ffi.C.WM_XBUTTONUP]		= VK_XBUTTON1;
+buttonmsgmap[ffi.C.WM_XBUTTONDBLCLK]	= VK_XBUTTON1;
+
+
 function HeadsUpViewer:OnKeyboardMouse(hWnd, msg, wParam, lParam)
 	if msg == ffi.C.WM_CHAR then
 		if _G.keychar then
@@ -51,6 +80,51 @@ function HeadsUpViewer:OnKeyboardMouse(hWnd, msg, wParam, lParam)
 	if msg == ffi.C.WM_KEYUP then
 		if _G.keyup then
 			keyup(tonumber(wParam), 0, 0);
+		end
+	end
+
+	if msg == ffi.C.WM_MOUSEMOVE then
+		if _G.mousemove then
+			local x = LOWORD(lParam);
+			local y = HIWORD(lParam);
+			local modifiers = LOWORD(wParam);
+			mousemove(x, y, modifiers)
+		end
+	end
+
+	if msg == ffi.C.WM_LBUTTONDOWN or msg == ffi.C.WM_RBUTTONDOWN or
+		msg == ffi.C.WM_MBUTTONDOWN or msg == ffi.C.WM_XBUTTONDOWN then
+
+		if _G.mousedown then
+			local modifiers = LOWORD(wParam);
+			local x = LOWORD(lParam);
+			local y = HIWORD(lParam);
+			local button = buttonmsgmap[msg];
+
+			mousedown(x, y, modifiers, button);
+		end
+	end
+
+	if msg == ffi.C.WM_LBUTTONUP or msg == ffi.C.WM_RBUTTONUP or
+		msg == ffi.C.WM_MBUTTONUP or msg == ffi.C.WM_XBUTTONUP then
+
+		if _G.mouseup then
+			local modifiers = LOWORD(wParam);
+			local x = LOWORD(lParam);
+			local y = HIWORD(lParam);
+			local button = buttonmsgmap[msg];
+
+			mouseup(x, y, modifiers, button);
+		end
+	end
+
+	if msg == ffi.C.WM_MOUSEWHEEL then
+		if _G.mousewheel then
+			local delta = sign(tonumber(ffi.new("short",HIWORD(wParam))));
+			local modifiers = LOWORD(wParam);
+			local x = LOWORD(lParam);
+			local y = HIWORD(lParam);
+			mousewheel(x, y, modifiers, delta)
 		end
 	end
 end

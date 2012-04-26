@@ -29,14 +29,18 @@ HUP = ffi.load("HeadsUp.exe")
 --]]
 
 ffi.cdef[[
+typedef void (*OnIdleDelegate)();
 typedef void (*OnResizedDelegate)(int newWidth, int newHeight);
 typedef void (*OnTickDelegate)(int tickCount);
 typedef void (*MsgReceiver)(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
+int RegisterIdleDelegate(OnIdleDelegate delegate);
 int RegisterKeyboardMouse(MsgReceiver receiver);
+int RegisterResizingDelegate(OnResizedDelegate delegate);
 int RegisterResizedDelegate(OnResizedDelegate delegate);
 int RegisterTickDelegate(OnTickDelegate delegate);
 
+double GetCurrentTickTime();
 int SwapGLBuffers(void);
 
 ]]
@@ -48,12 +52,19 @@ local canvasHeight = 768
 
 MainView = nil;
 
-function OnIdle(idleTime)
-	MainView:OnIdle(idleTime);
+
+GetCurrentTickTime = HUP.GetCurrentTickTime;
+
+function OnIdle()
+	MainView:OnIdle();
 end
 
 function OnTick(tickCount)
 	MainView:OnTick(tickCount)
+end
+
+function OnWindowResizing(width, height)
+	MainView:OnWindowResizing(width, height);
 end
 
 function OnWindowResized(width, height)
@@ -73,6 +84,8 @@ function main()
 	MainView = HeadsUpViewer(canvasWidth, canvasHeight)
 
 	-- Now register for delegate callbacks
+	HUP.RegisterIdleDelegate(OnIdle);
+	HUP.RegisterResizingDelegate(OnWindowResizing);
 	HUP.RegisterResizedDelegate(OnWindowResized);
 	HUP.RegisterTickDelegate(OnTick);
 	HUP.RegisterKeyboardMouse(OnKeyboardMouse);
@@ -80,7 +93,7 @@ function main()
 	-- If we have a file to load
 	-- Then load the file
 	if argv[2] ~= nil then
-print("StartUp main, loading file: ", argv[2]);
+--print("StartUp main, loading file: ", argv[2]);
 		MainView:LoadFile(argv[2])
 	end
 end

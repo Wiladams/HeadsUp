@@ -46,6 +46,8 @@ void main()
 
 
 local fragtext = [[
+#version 400
+#extension GL_ARB_gpu_shader_fp64 : enable
 //
 // Fragment shader for drawing the Mandelbrot set
 //

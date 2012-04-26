@@ -228,6 +228,7 @@ function glTexCoord(s, t, r, q)
 end
 
 glTexCoord2f = glTexCoord;
+glTexCoord2d = gl.glTexCoord2d;
 
 
 function glTranslate(x, y, z)
@@ -257,6 +258,8 @@ end
 glVertex2f = gl.glVertex2f;
 glVertex3f = gl.glVertex3f;
 glVertex4f = gl.glVertex4f;
+
+glVertex2d = gl.glVertex2d;
 
 glViewport = gl.glViewport;
 

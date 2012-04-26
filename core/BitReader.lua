@@ -1,7 +1,11 @@
 --require "BanateCore"
 
 local byteptr = ffi.typeof("uint8_t *")
-local floatptr = ffi.typeof("float *")
+
+local floatptr = function(ptr)
+	return ffi.cast("float *", ptr);
+end
+
 local doubleptr = ffi.typeof("double *")
 
 class.BitReader()
@@ -27,7 +31,7 @@ function BitReader:ReadInt32(bytes, bigendian)
 		lshift(bytes[0],0)
 end
 
-function BitReader:ReadInt64(bytes, value, bigendian)
+function BitReader:ReadInt64(bytes)
 	return
 		lshift(bytes[7],56) +
 		lshift(bytes[6],48) +
@@ -39,11 +43,11 @@ function BitReader:ReadInt64(bytes, value, bigendian)
 		lshift(bytes[0],0)
 end
 
-function BitReader:ReadSingle(bytes, value, bigendian)
+function BitReader:ReadSingle(bytes)
 	return floatptr(bytes)[0]
 end
 
-function BitReader:ReadDouble(bytes, value, bigendian)
+function BitReader:ReadDouble(bytes)
 	return doubleptr(bytes)[0]
 end
 

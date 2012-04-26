@@ -94,7 +94,7 @@ function CreatePixelArrayFromBytes(bytes)
 
 	-- We'll use a binary reader to make it easier
 	-- to get at the specific data types
-	reader = BitReader();
+	local reader = BitReader();
 
 	-- Targa images come in many different formats, and there are a couple of different versions
     -- of the specification.
