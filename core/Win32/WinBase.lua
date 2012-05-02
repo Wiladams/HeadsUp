@@ -318,3 +318,10 @@ typedef struct _BY_HANDLE_FILE_INFORMATION {
     DWORD nFileIndexLow;
 } BY_HANDLE_FILE_INFORMATION, *PBY_HANDLE_FILE_INFORMATION, *LPBY_HANDLE_FILE_INFORMATION;
 ]]
+
+--
+-- GetOverlappedResult()
+--
+function HasOverlappedIoCompleted(lpOverlapped)
+	return (lpOverlapped.Internal ~= STATUS_PENDING)
+end

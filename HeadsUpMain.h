@@ -40,7 +40,8 @@ DllExport int RegisterResizedDelegate(OnResizedDelegate delegate);
 
 DllExport double GetCurrentTickTime();
 DllExport int SwapGLBuffers(void);
-
+DllExport int RunLuaScript(void *s);
+DllExport int GetAppPath(char *buff, int bufflen);
 #ifdef __cplusplus
 }
 #endif

@@ -1,4 +1,4 @@
-require "BitReader"
+require "BinaryStreamReader"
 
 --[[
     // Targa Image file handling
@@ -94,7 +94,7 @@ function CreatePixelArrayFromBytes(bytes)
 
 	-- We'll use a binary reader to make it easier
 	-- to get at the specific data types
-	local reader = BitReader();
+	local reader = BinaryStreamReader.CreateForString(bytes)
 
 	-- Targa images come in many different formats, and there are a couple of different versions
     -- of the specification.
@@ -143,27 +143,24 @@ print("Extended File");
 	-- Now create the header that we'll fill in
 	fHeader = TargaHeader();
 
-	-- Go to the beginning of the bytes
-	local offset = 0;
-	local mstream = ffi.cast("uint8_t *", bytes);
 
-	fHeader.IDLength = reader:ReadByte(mstream); mstream = mstream +1;
-	fHeader.ColorMapType = reader:ReadByte(mstream);  mstream = mstream +1;
-	fHeader.ImageType = reader:ReadByte(mstream);  mstream = mstream +1;
-	fHeader.CMapStart = reader:ReadInt16(mstream);  mstream = mstream +2;
-	fHeader.CMapLength = reader:ReadInt16(mstream);  mstream = mstream +2;
-	fHeader.CMapDepth = reader:ReadByte(mstream);  mstream = mstream +1;
+	fHeader.IDLength = reader:ReadByte();
+	fHeader.ColorMapType = reader:ReadByte();
+	fHeader.ImageType = reader:ReadByte();
+	fHeader.CMapStart = reader:ReadInt16();
+	fHeader.CMapLength = reader:ReadInt16();
+	fHeader.CMapDepth = reader:ReadByte();
 
 	-- Image description
-	fHeader.XOffset = reader:ReadInt16(mstream);  mstream = mstream +2;
-	fHeader.YOffset = reader:ReadInt16(mstream);  mstream = mstream +2;
-	fHeader.Width = reader:ReadInt16(mstream);  mstream = mstream +2;         -- Width of image in pixels
-	fHeader.Height = reader:ReadInt16(mstream);  mstream = mstream +2;        -- Height of image in pixels
-	fHeader.PixelDepth = reader:ReadByte(mstream);  mstream = mstream +1;     -- How many bits per pixel
-	fHeader.ImageDescriptor = reader:ReadByte(mstream);  mstream = mstream +1;
+	fHeader.XOffset = reader:ReadInt16();
+	fHeader.YOffset = reader:ReadInt16();
+	fHeader.Width = reader:ReadUInt16();        -- Width of image in pixels
+	fHeader.Height = reader:ReadUInt16();        -- Height of image in pixels
+	fHeader.PixelDepth = reader:ReadByte();     -- How many bits per pixel
+	fHeader.ImageDescriptor = reader:ReadByte();
 
 
---printHeader(fHeader);
+printHeader(fHeader);
 
 --[[
  The single byte that is the ImageDescriptor contains the following
@@ -221,18 +218,16 @@ print("Extended File");
 	-- Skip past the Image Identification field if there is one
 	--byte[] ImageIdentification;
 	if (fHeader.IDLength > 0) then
-		ImageIdentification = reader.ReadBytes(fHeader.IDLength);
-		mstream = mstream + fHeader.IDLength
+		ImageIdentification = reader:ReadBytes(fHeader.IDLength);
 	end
 
 	-- calculate image size based on bytes per pixel, width and height.
 	local bytesPerRow = fHeader.Width * bytesPerPixel;
 	local tgaSize = bytesPerRow * fHeader.Height;
 	local imageData = Array1D(tgaSize, "uint8_t")
-	ffi.copy(imageData, mstream, tgaSize);
+	ffi.copy(imageData, reader.Bytes+reader.Position, tgaSize);
 
 	return imageData, fHeader.Width, fHeader.Height
-
 end
 
 

@@ -1,3 +1,10 @@
+local ffi = require "ffi"
+
+--package.path = package.path.."c:/repos/HeadsUp;c:/repos/HeadsUp/core/?.lua";
+--package.cpath = package.cpath..";".._appdir.."\\?.exe";
+
+
+require "BanateCore"
 
 class.StopWatch()
 
@@ -32,7 +39,7 @@ end
 
 function StopWatch:Seconds()
 	local currentTime = GetCurrentTickTime();
-
+--print("StopWatch:Seconds: ", currentTime);
 	local seconds = currentTime - self.StartTime;
 
 	return seconds;

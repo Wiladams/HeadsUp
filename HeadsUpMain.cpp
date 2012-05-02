@@ -3,6 +3,7 @@
 
 
 
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 static TCHAR szWindowClass[] = _T("win32app");
@@ -208,7 +209,7 @@ HGLRC HUPCreateGLContext(HWND hWnd, int majorversion, int minorversion, int mult
 	// and set the pixel format on that.
 	HDC hDC = GetDC(hWnd);
 	err = SetPixelFormat(hDC, pixelFormat, &pfd);
-	printf("SetPixelFormat, RETURNED: %d\n", err);
+	//printf("SetPixelFormat, RETURNED: %d\n", err);
 
 
 	// And finally, create a context of the specific
@@ -224,23 +225,13 @@ HGLRC HUPCreateGLContext(HWND hWnd, int majorversion, int minorversion, int mult
 
     HGLRC hRC = wglCreateContextAttribsARB(hDC, 0, ctxAttribs);
 	CHECKGL("wglCreateContextAttribsARB");
-	printf("hRC: 0x%x\n", hRC);
+	//printf("hRC: 0x%x\n", hRC);
 	if (hRC == NULL) {
 		// If creating the context that way failed for
 		// some reason, fall back to the old way of
 		// creating a context.
 		hRC = wglCreateContext(hDC);
 	}
-
-	//wglMakeCurrent(hDC, NULL);
-	//CHECKGL("wglMakeCurrent - NULL, NULL");
-
-	//wglDeleteContext(tmpRC);
-	//CHECKGL("wglDeleteContext");
-
-	//wglDeleteContext(hRC);
-	//ReleaseDC(throwAwayWindow, throwawayDC);
-	//DestroyWindow(throwAwayWindow);
 
 	return hRC;
 }
@@ -369,7 +360,7 @@ lua_State * HUPCreateLuaState()
 	int argidx = 1;
 
 	appdirlen = GetAppPath(appdir, MAX_PATH);
-//	printf("HeadUp Application Directory: %s\n", appdir);
+//	printf("HeadsUp Application Directory: %s\n", appdir);
 
 	lua_State *L = lua_open();  // create state
 
@@ -391,6 +382,9 @@ lua_State * HUPCreateLuaState()
 
 	lua_newtable(L);
 
+	lua_pushstring(L, appdir);
+	lua_setglobal(L, "_appdir");
+
 	// Add the application directory as the first item
 	lua_pushnumber(L, 1);
 	lua_pushstring(L, appdir);
@@ -408,7 +402,7 @@ lua_State * HUPCreateLuaState()
 	lua_setglobal(L, "argv");
 
 	startupbufflen = sprintf(startupbuff, "%s\\%s", appdir, "StartUp.lua");
-	startupbuff[startupbufflen] = '\0';
+	//startupbuff[startupbufflen] = '\0';
 	// Execute the startup script
 	//dolibrary(L, "HeadsUp.lua");
 	dofile(L, startupbuff);
@@ -501,23 +495,25 @@ LONGLONG GetPerformanceFrequency()
 }
 
 
-LONGLONG GetPerformanceCounter()
+LARGE_INTEGER GetPerformanceCounter()
 {
 	LARGE_INTEGER anum;
 	BOOL success = QueryPerformanceCounter(&anum);
 	if (success == 0) {
-		return 0;
+		printf("QueryPerformanceCounter, RETURNED: %d\n", success);
+		return anum;
 	}
+printf("GetPerformanceCounter: %d  %d\n", anum.u.LowPart, anum.u.HighPart);
 
-	return anum.QuadPart;
+	return anum;
 }
 
 double GetCurrentTickTime()
 {
 	double frequency = 1/GetPerformanceFrequency();
-	LONGLONG currentCount = GetPerformanceCounter();
-	double seconds = currentCount * frequency;
-
+	LARGE_INTEGER currentCount = GetPerformanceCounter();
+	double seconds = (double)currentCount.QuadPart * frequency;
+printf("GetCurrentTickTime() - %f\n", seconds);
 	return seconds;
 }
 
@@ -554,6 +550,40 @@ int RegisterResizedDelegate(OnResizedDelegate delegate)
 	return 0;
 }
 
+int RunLuaScript(void *s)
+{
+	char *codechunk = (char *)s;
+
+	int status;
+	lua_State *L = lua_open();	/* create the state */
+
+	if (L == NULL)
+	{
+		puts("RunLuaScript, cannot create state: not enough memory");
+		return -1;
+	}
+
+	// stop garbage collector during initialization
+	// open necessary libraries
+	lua_gc(L, LUA_GCSTOP, 0);
+	luaL_openlibs(L);
+	lua_gc(L, LUA_GCRESTART, -1);
+
+	// execute the specified script
+	//printf("RunLuaScript: %s\n", codechunk);
+	dostring(L, codechunk, "threadprogram");
+	//status = luaL_dostring(L, codechunk);
+
+	lua_close(L);
+
+	return status;
+}
+
+
+
+/*
+	Core running routine
+*/
 
 int Run()
 {
@@ -678,7 +708,7 @@ int main(int argc, char **argv)
 	hRC = HUPCreateGLContext(hWnd, majorversion, minorversion, multisamplemode);
 	hWndDC = GetDC(hWnd);
 	wglMakeCurrent(hWndDC, hRC);
-	printf("GLVersion: %s\n", glGetString(GL_VERSION));
+	//printf("GLVersion: %s\n", glGetString(GL_VERSION));
 
 
 	L = HUPCreateLuaState();

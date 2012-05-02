@@ -3,7 +3,6 @@
 --
 -- The main interface file
 --
---print("StartUp.lua - Package Path Before: ", package.path)
 
 ffi = require "ffi"
 
@@ -11,7 +10,9 @@ local apppath = string.format([[;%s\?.lua;%s\core\?.lua;%s\core\Win32\?.lua;%s\m
 local ppath = package.path..apppath;
 package.path = ppath;
 
---print("StartUp.lua - Package Path After: ", package.path)
+local libpath = string.format([[;%s\clibs\?.dll;%s\clibs\?.exe]], argv[1],argv[1]);
+package.cpath = package.cpath..libpath
+
 
 
 ogm = require("OglMan")
@@ -40,9 +41,10 @@ int RegisterResizingDelegate(OnResizedDelegate delegate);
 int RegisterResizedDelegate(OnResizedDelegate delegate);
 int RegisterTickDelegate(OnTickDelegate delegate);
 
-double GetCurrentTickTime();
+//double GetCurrentTickTime();
 int SwapGLBuffers(void);
-
+int RunLuaScript(void *);
+int GetAppPath(char *buff, int bufflen);
 ]]
 
 require "HeadsUpViewer"
@@ -53,7 +55,7 @@ local canvasHeight = 768
 MainView = nil;
 
 
-GetCurrentTickTime = HUP.GetCurrentTickTime;
+--GetCurrentTickTime = HUP.GetCurrentTickTime;
 
 function OnIdle()
 	MainView:OnIdle();
@@ -73,6 +75,10 @@ end
 
 function OnKeyboardMouse(hWnd, msg, wParam, lParam)
 	MainView:OnKeyboardMouse(hWnd, msg, wParam, lParam);
+end
+
+function RunLuaScript(codechunk)
+	HUP.RunLuaScript(ffi.cast("void *",codechunk));
 end
 
 

@@ -501,7 +501,7 @@ BOOL PostMessage(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
 void PostQuitMessage(int nExitCode);
 
 // PostThreadMessage
-BOOL PostThreadMessage(DWORD idThread, UINT Msg, WPARAM wParam, LPARAM lParam);
+BOOL PostThreadMessageA(DWORD idThread, UINT Msg, WPARAM wParam, LPARAM lParam);
 
 // SendMessage
 int SendMessageA(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -541,7 +541,6 @@ BOOL InvalidateRect(HWND hWnd, const RECT* lpRect, BOOL bErase);
 
 // WINDOW UTILITIES
 
-uint32_t GetLastError();
 
 typedef BOOL (*WNDENUMPROC)(HWND hwnd, LPARAM l);
 

@@ -2,10 +2,12 @@ local ffi = require "ffi"
 local C = ffi.C
 
 require "WinBase"
+local kernel32 = ffi.load("kernel32");
 
 -- File System Calls
 --
 ffi.cdef[[
+DWORD GetCurrentDirectoryA(DWORD nBufferLength, LPTSTR lpBuffer);
 
 HANDLE CreateFileA(LPCTSTR lpFileName,
 	DWORD dwDesiredAccess,
@@ -40,6 +42,9 @@ typedef DWORD  (*LPTHREAD_START_ROUTINE)(LPVOID lpParameter);
 
 
 ffi.cdef[[
+
+DWORD GetLastError();
+
 HMODULE GetModuleHandleA(LPCSTR lpModuleName);
 
 BOOL CloseHandle(HANDLE hObject);
@@ -64,6 +69,8 @@ HANDLE CreateThread(
 	DWORD dwCreationFlags,
 	LPDWORD lpThreadId);
 
+
+DWORD GetCurrentThreadId(void);
 DWORD ResumeThread(HANDLE hThread);
 BOOL SwitchToThread(void);
 DWORD SuspendThread(HANDLE hThread);
@@ -97,13 +104,31 @@ function GetPerformanceCounter()
 	return tonumber(anum[0])
 end
 
+function GetCurrentTickTime()
+	local frequency = 1/GetPerformanceFrequency();
+	local currentCount = GetPerformanceCounter();
+	local seconds = currentCount * frequency;
+--print(string.format("win_kernel32 - GetCurrentTickTime() - %d\n", seconds));
+
+	return seconds;
+end
+
+
 function GetProcAddress(library, funcname)
 	ffi.load(library)
 	local paddr = C.GetProcAddress(C.GetModuleHandleA(library), funcname)
 	return paddr
 end
 
+function GetCurrentDirectory()
+	local buffsize = 1024;
+	local buff = ffi.new("char[1024]");
+	local err = kernel32.GetCurrentDirectoryA(buffsize, buff);
 
+	if err == 0 then return nil end
+
+	return ffi.string(buff);
+end
 
 --[[
 	WinNls.h
