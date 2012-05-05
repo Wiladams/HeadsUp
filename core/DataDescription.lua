@@ -1,3 +1,7 @@
+local ffi = require "ffi"
+
+require "BitBang"
+
 --[[
 	A prototypical data structure contains the following:
 
@@ -35,18 +39,40 @@ Field = {
 
 
 
+function BitOffsetsFromTypeInfo(desc)
+	local bitoffset = 0;
+	local nbits = 0;
 
+	local repeating = 1
+
+	for _,field in ipairs(desc.fields) do
+		repeating = field.repeating or 1
+		if field.subtype == "bit" then
+			nbits = repeating
+		else
+			nbits = (ffi.sizeof(field.basetype)*8)*repeating
+		end
+
+		field.offset = bitoffset
+		field.sizeinbits = nbits
+
+		bitoffset = bitoffset + nbits
+	end
+
+	return desc.fields, math.ceil(bitoffset/8);
+end
 
 function CStructFieldFromTypeInfo(field)
 	if not field.basetype then return nil end;
 
+	local repeating = field.repeating or 1
+
 	if field.subtype == "bit" then
-		local repeating = field.repeating or 1
 		return string.format("%s %s : %d;", field.basetype, field.name, repeating);
 	end
 
-	if field.repeating and field.repeating > 1 then
-		return string.format("%s %s[%d];",field.basetype, field.name, field.repeating);
+	if repeating > 1 then
+		return string.format("%s %s[%d];",field.basetype, field.name, repeating);
 	end
 
 	if field.basetype == "string" then
@@ -129,3 +155,241 @@ function CTypeDeSerializer(info)
 end
 
 
+--[[
+Generate code that looks like this:
+
+class.ClassName()
+
+function ClassName:_init(buff)
+    self.Buffer = buff
+end
+
+-- For each field
+function get_FieldName()
+	return getbitsfrombytes(self.Buffer, offset, size);
+end
+
+function set_FieldName(value)
+	setbitstobytes(self.Buffer, offset, size, value);
+end
+
+--]]
+
+function GetPointerForField(dataptr, field)
+	local byteoffset = field.offset/8
+	local ptr = ffi.cast(field.basetype.." *",datattr + byteoffset)
+
+	return ptr
+end
+
+function CreateClassFieldWriter(field, classname)
+	local str = nil
+	local repeating = field.repeating or 1
+
+	if field.subtype == "bit" then
+		str = string.format(
+[[
+function %s:set_%s(value)
+	setbitstobytes(self.DataPtr, %d, %d, value);
+	return self
+end
+]], classname, field.name, field.offset, field.sizeinbits);
+		return str;
+	end
+
+	if field.subtype == "string" then
+		str = string.format(
+[[
+function %s:set_%s(value)
+	local maxbytes = math.min(%d-1, string.len(value))
+	local byteoffset = %d/8
+	local ptr = ffi.cast("%s *",self.DataPtr + byteoffset)
+
+	for i=0,maxbytes-1 do
+		ptr[i] = string.byte(value:sub(i+1,i+1))
+	end
+	ptr[maxbytes+1]= 0
+	return self
+end
+]], classname, field.name, repeating, field.offset, field.basetype);
+		return str;
+	end
+
+
+	str = string.format(
+[[
+function %s:set_%s(value)
+	setbitstobytes(self.DataPtr, %d, %d, value);
+	return self
+end
+]], classname, field.name, field.offset, field.sizeinbits);
+
+	return str;
+end
+
+function CreateClassFieldReader(field, classname)
+	local str = nil
+	local repeating = field.repeating or 1
+
+	if field.subtype == "bit" then
+		str = string.format([[
+function %s:get_%s()
+	return getbitsfrombytes(self.DataPtr, %d, %d);
+end
+]], classname, field.name, field.offset, repeating);
+
+		return str
+	end
+
+	if field.subtype == "string" then
+		str = string.format([[
+function %s:get_%s()
+	local byteoffset = %d/8
+	local ptr = ffi.cast("%s *",self.DataPtr + byteoffset)
+	return ffi.string(ptr);
+end
+]], classname, field.name, field.offset, field.basetype, repeating);
+
+		return str
+
+	end
+
+	if repeating > 1 then
+		str = string.format([[
+function %s:get_%s()
+	local byteoffset = %d/8
+	local ptr = ffi.cast("%s *",self.DataPtr + byteoffset)
+	return ptr, %d;
+end
+]], classname, field.name, field.offset, field.basetype, repeating);
+
+		return str
+	else
+		str = string.format([[
+function %s:get_%s()
+	return getbitsfrombytes(self.DataPtr, %d, %d);
+end
+]], classname, field.name, field.offset, field.sizeinbits);
+		return str
+	end
+
+end
+
+function AppendClassField(field, classname)
+	local str
+
+	if field.default then
+		str = string.format(classname..[[.Fields.]]..field.name..[[ = {name="]]..field.name..[[", basetype="]]..field.basetype..[[", offset= ]]..field.offset..[[, sizeinbits = ]]..field.sizeinbits..[[, default= ]]..field.default..[[}]])
+	else
+		str = string.format(classname..[[.Fields.]]..field.name..[[ = {name="]]..field.name..[[", basetype="]]..field.basetype..[[", offset= ]]..field.offset..[[, sizeinbits = ]]..field.sizeinbits..[[}]])
+	end
+
+	return str
+end
+
+
+
+function CreateClassDefaults(fields)
+	local res = {}
+
+	for _,field in ipairs(fields) do
+		if field.default then
+			local str = [[self:set_]]..field.name..[[(]]..field.default..[[)]]
+			table.insert(res, str)
+			table.insert(res, "\n");
+		end
+	end
+
+	return table.concat(res);
+end
+
+function SetClassValues(values)
+	if not values then return "" end
+
+	local res = {}
+	local str
+
+	for fieldname,value in pairs(values) do
+		str = [[self.set_]]..fieldname..[[(self, ]]..value..[[)]]
+		table.insert(res, str)
+		table.insert(res,"\n")
+	end
+
+	return table.concat(res)
+end
+
+function CreateBufferClass(desc)
+	local funcs = {}
+
+	-- first create the offsets structure
+	local offsets, bytesize = BitOffsetsFromTypeInfo(desc)
+
+	for _,field in ipairs(offsets) do
+		table.insert(funcs, CreateClassFieldWriter(field, desc.name))
+		table.insert(funcs, "\n");
+		table.insert(funcs, CreateClassFieldReader(field, desc.name))
+		table.insert(funcs, "\n");
+
+		table.insert(funcs, AppendClassField(field, desc.name))
+		table.insert(funcs, "\n\n");
+	end
+
+	local funcstr = table.concat(funcs)
+
+	-- go through field by field and create the
+	-- bit of code that will write to the buffer
+
+	-- ]]..desc.name..[[._Fields = ]]..desc.fields..[[
+	local classTemplate =
+[[
+class.]]..desc.name..[[()
+
+]]..desc.name..[[.Fields = {}
+
+function ]]..desc.name..[[:_init(...)
+	local args={...}
+
+    self.ClassSize = ]]..bytesize..[[
+
+
+	-- Use passed in memory if specified
+	if #args == 2 or #args == 3 then
+		if type(args[1]) == "cdata" and type(args[2]) == "number" then
+			self.Buffer = args[1]
+			self.BufferSize = args[2]
+			self.Offset = args[3] or 0
+		end
+	else
+		-- Allocate memory ourselves
+		self.Buffer = ffi.new(]]..string.format([["uint8_t[%d]"]], bytesize)..[[)
+        self.BufferSize = ffi.sizeof(self.Buffer)
+        self.Offset = 0
+	end
+
+	self.DataPtr = self.Buffer + self.Offset
+
+	-- Set any default values that might exist on fields
+	]]..CreateClassDefaults(desc.fields)..[[
+
+	-- Set values if passed in
+	if #args == 1 and type(args[1]) == "table" then
+		for fieldname, value in pairs(args[1]) do
+			self:SetFieldValue(fieldname, value);
+		end
+	end
+end
+
+-- Create function that can set an individual
+-- field value
+function ]]..desc.name..[[:SetFieldValue(fieldname, value)
+    local field = ]]..desc.name..[[.Fields[fieldname]
+	if field then
+		setbitstobytes(self.DataPtr, field.offset, field.sizeinbits, value);
+	end
+end
+
+]]..funcstr..[[
+]]
+
+	return classTemplate
+end

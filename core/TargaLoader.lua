@@ -1,4 +1,5 @@
 require "BinaryStreamReader"
+require "DataDescription"
 
 --[[
     // Targa Image file handling
@@ -6,6 +7,155 @@ require "BinaryStreamReader"
     // http://en.wikipedia.org/wiki/Truevision_TGA
 --]]
 
+
+
+TargaHead_Info = {
+	name = "TargaHead";
+	fields = {
+		{name = "IDLength", basetype = "uint8_t"};
+		{name = "ColorMapType", basetype = "uint8_t"};
+		{name = "ImageType", basetype = "uint8_t"};
+		{name = "CMapStart", basetype = "uint16_t"};
+		{name = "CMapLength", basetype = "uint16_t"};
+		{name = "CMapDepth", basetype = "uint8_t"};
+		{name = "XOffset", basetype = "uint16_t"};
+		{name = "YOffset", basetype = "uint16_t"};
+		{name = "Width", basetype = "uint16_t"};
+		{name = "Height", basetype = "uint16_t"};
+		{name = "PixelDepth", basetype = "uint8_t"};
+		{name = "ImageDescriptor", basetype = "uint8_t"};
+	};
+};
+
+--[[
+/* Bytes 0-3: The Extension Area Offset */
+/* Bytes 4-7: The Developer Directory Offset */
+/* Bytes 8-23: The Signature - "TRUEVISION-XFILE" */
+/* Byte 24: ASCII Character “.” */
+/* Byte 25: Binary zero string terminator (0x00) */
+--]]
+
+TargaFoot_Info = {
+	name = "TargaFoot";
+	fields = {
+		{name = "ExtensionAreaOffset", basetype = "uint32_t"};
+		{name = "DeveloperDirectoryOffset", basetype = "uint32_t"};
+		{name = "Signature", basetype = "char", repeating = 16};
+		{name = "Period", basetype = "char"};
+		{name = "BinaryZero", basetype = "uint8_t"};
+	};
+};
+
+--[[
+ The single byte that is the ImageDescriptor contains the following
+ information.
+  Bits 3-0 - number of attribute bits associated with each  |
+               pixel.  For the Targa 16, this would be 0 or |
+               1.  For the Targa 24, it should be 0.  For   |
+               Targa 32, it should be 8.                    |
+  Bit 4    - controls left/right transfer of pixels to
+             the screen.
+             0 = left to right
+             1 = right to left
+  Bit 5    - controls top/bottom transfer of pixels to
+             the screen.
+             0 = bottom to top
+             1 = top to bottom
+
+             In Combination bits 5/4, they would have these values
+             00 = bottom left
+             01 = bottom right
+             10 = top left
+             11 = top right
+
+  Bits 7-6 - Data storage interleaving flag.                |
+             00 = non-interleaved.                          |
+             01 = two-way (even/odd) interleaving.          |
+             10 = four way interleaving.                    |
+             11 = reserved.
+--]]
+
+ImageDescriptor_Info = {
+	name = "ImageDescriptor";
+	fields = {
+		{name = "Attributes", basetype = "uint8_t", subtype="bit", repeating=4};
+		{name = "LeftToRight", basetype = "uint8_t", subtype="bit", repeating=1};
+		{name = "TopToBottom", basetype = "uint8_t", subtype="bit", repeating=1};
+		{name = "Interleave", basetype = "uint8_t", subtype="bit", repeating=2};
+	};
+};
+
+
+local function CreateTargaClasses()
+	local header = CreateBufferClass(TargaHead_Info)
+print(header)
+	local f = loadstring(header)
+	f()
+
+	local footer = CreateBufferClass(TargaFoot_Info)
+	f = loadstring(footer)
+	f()
+
+	local descriptor = CreateBufferClass(ImageDescriptor_Info)
+	f = loadstring(descriptor)
+	f()
+end
+
+
+
+function CreatePixelArrayFromBytes(bytes, size)
+	local tgaSize;
+    local isExtendedFile;
+
+	local fileLength = size;
+
+	local fHeader = TargaHead(bytes, size)
+	local desc = ImageDescriptor(fHeader.ImageDescriptor);
+
+	local targaXFileID = "TRUEVISION-XFILE";
+	-- Get the last 26 bytes of the file so we can see if the signature
+	-- is in there.
+	local targaFooterBytes = bytes:sub(-26, fileLength);
+	local footer = TargaFoot(targaFooterBytes)
+	local targaFooterSignature = targaFooterBytes:sub(9,9+string.len(targaXFileID));
+
+	-- If the strings compare favorably, then we have a match for an extended
+	-- TARGA file type.
+	local isExtendedFile = targaFooterSignature == targaXFileID;
+
+
+
+	-- We can't deal with the compressed image types, so if we encounter
+	-- any of them, we'll just return null.
+	if ((C.TrueColor ~= fHeader.ImageType) and (C.Monochrome ~= fHeader.ImageType)) then
+		return nil;
+	end
+
+
+	local bytesPerPixel = fHeader.PixelDepth / 8;
+
+
+	-- Skip past the Image Identification field if there is one
+	--byte[] ImageIdentification;
+	if (fHeader.IDLength > 0) then
+		ImageIdentification = reader:ReadBytes(fHeader.IDLength);
+	end
+
+   -- We'll use a binary reader to make it easier
+	-- to get at the specific data types
+	local reader = BinaryStreamReader.CreateForString(bytes)
+
+	-- calculate image size based on bytes per pixel, width and height.
+	local bytesPerRow = fHeader.Width * bytesPerPixel;
+	local tgaSize = bytesPerRow * fHeader.Height;
+	local imageData = Array1D(tgaSize, "uint8_t")
+	ffi.copy(imageData, reader.Bytes+reader.Position, tgaSize);
+
+	return imageData, fHeader
+end
+
+
+--[=[
 ffi.cdef[[
 typedef enum TargaColorMapType
 {
@@ -21,11 +171,11 @@ enum HorizontalOrientation
 
 enum ImageOrigin
 {
-        OriginMask = 0x30,
-        BottomLeft = 0x00,
-        BottomRight = 0x10,
-        TopLeft = 0x20,
-        TopRight = 0x30
+	OriginMask = 0x30,
+	BottomLeft = 0x00,
+	BottomRight = 0x10,
+	TopLeft = 0x20,
+	TopRight = 0x30
 };
 
 typedef enum
@@ -55,11 +205,6 @@ struct TargaHeader
 	uint8_t ImageDescriptor;       	/* 11h  Image descriptor byte */
 };
 
-/* Bytes 0-3: The Extension Area Offset */
-/* Bytes 4-7: The Developer Directory Offset */
-/* Bytes 8-23: The Signature - "TRUEVISION-XFILE" */
-/* Byte 24: ASCII Character “.” */
-/* Byte 25: Binary zero string terminator (0x00) */
 
 struct TargaFooter
 {
@@ -71,20 +216,9 @@ struct TargaFooter
 };
 ]]
 
+
 local TargaHeader = ffi.typeof("struct TargaHeader");
 local TargaFooter = ffi.typeof("struct TargaFooter");
-
-function printHeader(header)
-	print("Color Map Type: ", header.ColorMapType);
-	print("Image Type: ", header.ImageType);
-	print("XOffset: ", header.XOffset);
-	print("YOffset: ", header.YOffset);
-	print("Width: ", header.Width);
-	print("Height: ", header.Height);
-	print("PixelDepth: ", header.PixelDepth);
-	print(string.format("Descriptor: 0x%x", header.ImageDescriptor));
-end
-
 
 function CreatePixelArrayFromBytes(bytes)
 	local tgaSize;
@@ -229,7 +363,7 @@ printHeader(fHeader);
 
 	return imageData, fHeader.Width, fHeader.Height
 end
-
+--]=]
 
 function ReadTargaFromFile(filename)
 	if ((nil == filename) or ("" == filename)) then
@@ -240,14 +374,17 @@ function ReadTargaFromFile(filename)
 	local filestream = io.open(filename, 'rb')
 
 	local bytes = filestream:read("*all")
+	local size = string.len(bytes);
 
-
-	local data, width, height = CreatePixelArrayFromBytes(bytes);
+	local data, header = CreatePixelArrayFromBytes(bytes, size);
 
 	filestream:close();
 
-	return data, width, height;
+	return data, header.Width, header.Height;
 end
+
+
+CreateTargaClasses()
 
 
 
