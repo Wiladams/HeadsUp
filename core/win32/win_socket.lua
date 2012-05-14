@@ -24,6 +24,7 @@ local rshift = bit.rshift
 local band = bit.band
 local bor = bit.bor
 local bswap = bit.bswap
+local bnot = bit.bnot
 
 require "WinBase"
 
@@ -754,15 +755,15 @@ BOOL AcceptEx (SOCKET sListenSocket, SOCKET sAcceptSocket,
     LPOVERLAPPED lpOverlapped);
 
 int WSAIoctl(
-  __in   SOCKET s,
-  __in   DWORD dwIoControlCode,
-  __in   LPVOID lpvInBuffer,
-  __in   DWORD cbInBuffer,
-  __out  LPVOID lpvOutBuffer,
-  __in   DWORD cbOutBuffer,
-  __out  LPDWORD lpcbBytesReturned,
-  __in   LPWSAOVERLAPPED lpOverlapped,
-  __in   LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine
+	SOCKET s,
+	DWORD dwIoControlCode,
+	LPVOID lpvInBuffer,
+	DWORD cbInBuffer,
+	LPVOID lpvOutBuffer,
+	DWORD cbOutBuffer,
+	LPDWORD lpcbBytesReturned,
+	LPWSAOVERLAPPED lpOverlapped,
+	LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine
 );
 
 int WSARecv(

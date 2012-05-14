@@ -28,6 +28,10 @@ BOOL GetFileTime(HANDLE hFile,
 
 BOOL FileTimeToSystemTime(const FILETIME* lpFileTime, LPSYSTEMTIME lpSystemTime);
 
+BOOL DeleteFileW(LPCTSTR lpFileName);
+
+BOOL MoveFileW(LPCTSTR lpExistingFileName, LPCTSTR lpNewFileName);
+
 	/*
 HFILE WINAPI OpenFile(LPCSTR lpFileName,
 	LPOFSTRUCT lpReOpenBuff,

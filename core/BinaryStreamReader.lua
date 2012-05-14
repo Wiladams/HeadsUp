@@ -29,7 +29,6 @@ function BinaryStreamReader:Seek(pos)
 	if pos < 0 or pos >= self.Length then return nil end;
 
 	self.Position = pos;
-	self.Sentinel = self.Bytes + self.Position;
 
 	return self.Position;
 end

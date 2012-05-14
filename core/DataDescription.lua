@@ -47,13 +47,20 @@ function BitOffsetsFromTypeInfo(desc)
 
 	for _,field in ipairs(desc.fields) do
 		repeating = field.repeating or 1
+
+		if field.offset then
+			bitoffset = field.offset * 8
+		end
+
+		field.bitoffset = bitoffset
+
+
 		if field.subtype == "bit" then
 			nbits = repeating
 		else
 			nbits = (ffi.sizeof(field.basetype)*8)*repeating
 		end
 
-		field.offset = bitoffset
 		field.sizeinbits = nbits
 
 		bitoffset = bitoffset + nbits
@@ -176,7 +183,7 @@ end
 --]]
 
 function GetPointerForField(dataptr, field)
-	local byteoffset = field.offset/8
+	local byteoffset = field.bitoffset/8
 	local ptr = ffi.cast(field.basetype.." *",datattr + byteoffset)
 
 	return ptr
@@ -193,7 +200,7 @@ function %s:set_%s(value)
 	setbitstobytes(self.DataPtr, %d, %d, value);
 	return self
 end
-]], classname, field.name, field.offset, field.sizeinbits);
+]], classname, field.name, field.bitoffset, field.sizeinbits);
 		return str;
 	end
 
@@ -211,7 +218,7 @@ function %s:set_%s(value)
 	ptr[maxbytes+1]= 0
 	return self
 end
-]], classname, field.name, repeating, field.offset, field.basetype);
+]], classname, field.name, repeating, field.bitoffset, field.basetype);
 		return str;
 	end
 
@@ -222,7 +229,7 @@ function %s:set_%s(value)
 	setbitstobytes(self.DataPtr, %d, %d, value);
 	return self
 end
-]], classname, field.name, field.offset, field.sizeinbits);
+]], classname, field.name, field.bitoffset, field.sizeinbits);
 
 	return str;
 end
@@ -236,7 +243,7 @@ function CreateClassFieldReader(field, classname)
 function %s:get_%s()
 	return getbitsfrombytes(self.DataPtr, %d, %d);
 end
-]], classname, field.name, field.offset, repeating);
+]], classname, field.name, field.bitoffset, repeating);
 
 		return str
 	end
@@ -248,7 +255,7 @@ function %s:get_%s()
 	local ptr = ffi.cast("%s *",self.DataPtr + byteoffset)
 	return ffi.string(ptr);
 end
-]], classname, field.name, field.offset, field.basetype, repeating);
+]], classname, field.name, field.bitoffset, field.basetype, repeating);
 
 		return str
 
@@ -261,7 +268,7 @@ function %s:get_%s()
 	local ptr = ffi.cast("%s *",self.DataPtr + byteoffset)
 	return ptr, %d;
 end
-]], classname, field.name, field.offset, field.basetype, repeating);
+]], classname, field.name, field.bitoffset, field.basetype, repeating);
 
 		return str
 	else
@@ -269,7 +276,7 @@ end
 function %s:get_%s()
 	return getbitsfrombytes(self.DataPtr, %d, %d);
 end
-]], classname, field.name, field.offset, field.sizeinbits);
+]], classname, field.name, field.bitoffset, field.sizeinbits);
 		return str
 	end
 
@@ -279,9 +286,9 @@ function AppendClassField(field, classname)
 	local str
 
 	if field.default then
-		str = string.format(classname..[[.Fields.]]..field.name..[[ = {name="]]..field.name..[[", basetype="]]..field.basetype..[[", offset= ]]..field.offset..[[, sizeinbits = ]]..field.sizeinbits..[[, default= ]]..field.default..[[}]])
+		str = string.format(classname..[[.Fields.]]..field.name..[[ = {name="]]..field.name..[[", basetype="]]..field.basetype..[[", bitoffset= ]]..field.bitoffset..[[, sizeinbits = ]]..field.sizeinbits..[[, default= ]]..field.default..[[}]])
 	else
-		str = string.format(classname..[[.Fields.]]..field.name..[[ = {name="]]..field.name..[[", basetype="]]..field.basetype..[[", offset= ]]..field.offset..[[, sizeinbits = ]]..field.sizeinbits..[[}]])
+		str = string.format(classname..[[.Fields.]]..field.name..[[ = {name="]]..field.name..[[", basetype="]]..field.basetype..[[", bitoffset= ]]..field.bitoffset..[[, sizeinbits = ]]..field.sizeinbits..[[}]])
 	end
 
 	return str
@@ -384,7 +391,7 @@ end
 function ]]..desc.name..[[:SetFieldValue(fieldname, value)
     local field = ]]..desc.name..[[.Fields[fieldname]
 	if field then
-		setbitstobytes(self.DataPtr, field.offset, field.sizeinbits, value);
+		setbitstobytes(self.DataPtr, field.bitoffset, field.sizeinbits, value);
 	end
 end
 
